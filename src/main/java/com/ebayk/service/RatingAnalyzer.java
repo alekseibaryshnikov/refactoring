@@ -1,44 +1,25 @@
 package com.ebayk.service;
 
 import com.ebayk.data.user.User;
-import com.ebayk.data.user.UserRating;
 import com.ebayk.data.user.UserRepository;
-import java.util.ArrayList;
-import java.util.List;
+import com.ebayk.service.exceptions.UserNotFoundException;
+
+import java.util.*;
 
 public class RatingAnalyzer {
 
-  public static List<User> getRatedUserForRatingCreator(Integer userId)
-      throws UserNotFoundException {
-
-    List<User> ratedUsers = new ArrayList<User>();
+  public static List<User> getRatedUserForRatingCreator(Integer ratingCreatorId)
+          throws UserNotFoundException {
     UserRepository userRepository = new UserRepository();
-    User ratingCreator = userRepository.getUser(userId);
+    User ratingCreator = userRepository.getUser(ratingCreatorId);
 
-    if (ratingCreator != null) {
-      for (User ratedUser : userRepository.getUsers()) {
-        for (UserRating rating : ratedUser.getRatings()) {
-          if (rating.getRatingCreatorUserId() == ratingCreator.getId()) {
-            User user = userRepository.getUser(rating.getRatingCreatorUserId());
+    if (ratingCreator == null) throw new UserNotFoundException(ratingCreatorId);
 
-            if (user != null) {
-              ratedUsers.add(ratedUser);
-            } else {
-              throw new UserNotFoundException(rating.getRatingCreatorUserId());
-            }
-          }
-        }
-      }
-    } else {
-      throw new UserNotFoundException(userId);
-    }
-    return ratedUsers;
-  }
-
-  public static class UserNotFoundException extends Exception {
-
-    public UserNotFoundException(Integer userId) {
-      super("User with id '" + userId  + "' does not exist");
-    }
+    List<User> userList = new LinkedList<>();
+    userRepository.getUsers().forEach(user -> user.getRatings().stream()
+            .filter(rating -> rating.getRatingCreatorUserId().equals(ratingCreatorId))
+            .findAny()
+            .ifPresent(result -> userList.add(user)));
+    return userList;
   }
 }
